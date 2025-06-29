@@ -3,11 +3,8 @@ import json
 import time
 import threading
 
-def mouth_loop(ws):
-    try:
-        while True:
-            # Open mouth
-            mouth_open = {
+def mouth_(time_open, time_close):
+    mouth_open = {
                 "apiName": "VTubeStudioPublicAPI",
                 "apiVersion": "1.0",
                 "requestID": "mouthOpen",
@@ -23,28 +20,33 @@ def mouth_loop(ws):
                     ]
                 }
             }
-            ws.send(json.dumps(mouth_open))
-            time.sleep(1)
+    ws.send(json.dumps(mouth_open))
+    time.sleep(time_open)
 
             # Close mouth
-            mouth_close = {
-                "apiName": "VTubeStudioPublicAPI",
-                "apiVersion": "1.0",
-                "requestID": "mouthClose",
-                "messageType": "InjectParameterDataRequest",
-                "data": {
-                    "faceFound": False,
-                    "mode": "set",
-                    "parameterValues": [
-                        {
-                            "id": "MouthOpen",
-                            "value": 0
-                        }
-                    ]
+    mouth_close = {
+        "apiName": "VTubeStudioPublicAPI",
+        "apiVersion": "1.0",
+        "requestID": "mouthClose",
+        "messageType": "InjectParameterDataRequest",
+        "data": {
+            "faceFound": False,
+            "mode": "set",
+            "parameterValues": [
+                {
+                    "id": "MouthOpen",
+                    "value": 0
                 }
-            }
-            ws.send(json.dumps(mouth_close))
-            time.sleep(1)
+            ]
+        }
+    }
+    ws.send(json.dumps(mouth_close))
+    time.sleep(time_close)
+
+def mouth_loop(ws):
+    try:
+        while True:
+            mouth_(0.5, 0.5)
     except Exception as e:
         print("Mouth loop stopped:", e)
 
