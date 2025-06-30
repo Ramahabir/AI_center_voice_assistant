@@ -2,7 +2,11 @@ import websocket
 import json
 import time
 import threading
+import numpy as np
+import pyaudio
+import wave
 
+wav_path = "audio.wav"
 def mouth_(time_open, time_close):
     mouth_open = {
                 "apiName": "VTubeStudioPublicAPI",
@@ -62,8 +66,8 @@ def on_message(ws, message):
         }
         ws.send(json.dumps(model_info))
     elif response.get("messageType") == "CurrentModelResponse":
-        # Start the mouth open/close loop in a background thread
-        threading.Thread(target=mouth_loop, args=(ws,), daemon=True).start()
+        threading.Thread(target=lipsync_wav, args=(ws,wav_path), daemon=True).start()
+        # threading.Thread(target=lipsync_text, args=(ws, text), daemon=True).start()
 
 def on_open(ws):
     auth = {
@@ -78,6 +82,49 @@ def on_open(ws):
         }
     }
     ws.send(json.dumps(auth))
+
+def lipsync_wav(ws, wav_path):
+    wf = wave.open(wav_path, 'rb')
+    chunk = 1024
+    # Setup audio playback
+    p = pyaudio.PyAudio()
+    stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
+                    channels=wf.getnchannels(),
+                    rate=wf.getframerate(),
+                    output=True)
+    try:
+        while True:
+            data = wf.readframes(chunk)
+            if not data:
+                break
+            # Play audio chunk
+            stream.write(data)
+            audio = np.frombuffer(data, dtype=np.int16)
+            volume = np.linalg.norm(audio) / chunk
+            mouth_value = min(volume / 500, 1.0)
+            param = {
+                "apiName": "VTubeStudioPublicAPI",
+                "apiVersion": "1.0",
+                "requestID": "lipsync",
+                "messageType": "InjectParameterDataRequest",
+                "data": {
+                    "faceFound": True,
+                    "mode": "set",
+                    "parameterValues": [
+                        {
+                            "id": "MouthOpen",
+                            "value": mouth_value
+                        }
+                    ]
+                }
+            }
+            ws.send(json.dumps(param))
+            time.sleep(chunk / wf.getframerate())
+    finally:
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        wf.close()
 
 ws = websocket.WebSocketApp(
     "ws://localhost:8001",
