@@ -12,6 +12,7 @@ import threading
 import numpy as np
 import pyaudio
 import wave
+import re
 
 
 # Load environment variables
@@ -353,12 +354,17 @@ def generate_response():
             max_tokens=250
         )
         
-        reply = response.choices[0].message.content
-        conversation_history.append({"role": "assistant", "content": reply})
+        reply = response.choices[0].message.content;
+
+        # Remove markdown symbols like **, __, *, _, `, etc.
+        reply_clean = re.sub(r'(\*\*|__|\*|_|`|~|#)', '', reply);
+        # Optionally, remove other unwanted symbols or patterns here
+
+        conversation_history.append({"role": "assistant", "content": reply_clean})
         
         return {
             "success": True,
-            "reply": reply
+            "reply": reply_clean
         }
     except Exception as e:
         return {
