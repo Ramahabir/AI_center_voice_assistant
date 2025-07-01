@@ -319,7 +319,7 @@ def generate_speech():
                 "audio": audio_base64
             }
         else:
-            return {
+            return { 
                 "success": False,
                 "message": f"Speech synthesis failed: {result.reason}"
             }

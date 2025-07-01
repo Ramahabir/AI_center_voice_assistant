@@ -7,52 +7,6 @@ import pyaudio
 import wave
 
 wav_path = "audio.wav"
-def mouth_(time_open, time_close):
-    mouth_open = {
-                "apiName": "VTubeStudioPublicAPI",
-                "apiVersion": "1.0",
-                "requestID": "mouthOpen",
-                "messageType": "InjectParameterDataRequest",
-                "data": {
-                    "faceFound": False,
-                    "mode": "set",
-                    "parameterValues": [
-                        {
-                            "id": "MouthOpen",
-                            "value": 1
-                        }
-                    ]
-                }
-            }
-    ws.send(json.dumps(mouth_open))
-    time.sleep(time_open)
-
-            # Close mouth
-    mouth_close = {
-        "apiName": "VTubeStudioPublicAPI",
-        "apiVersion": "1.0",
-        "requestID": "mouthClose",
-        "messageType": "InjectParameterDataRequest",
-        "data": {
-            "faceFound": False,
-            "mode": "set",
-            "parameterValues": [
-                {
-                    "id": "MouthOpen",
-                    "value": 0
-                }
-            ]
-        }
-    }
-    ws.send(json.dumps(mouth_close))
-    time.sleep(time_close)
-
-def mouth_loop(ws):
-    try:
-        while True:
-            mouth_(0.5, 0.5)
-    except Exception as e:
-        print("Mouth loop stopped:", e)
 
 def on_message(ws, message):
     response = json.loads(message)
