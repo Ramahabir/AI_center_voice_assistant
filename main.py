@@ -306,7 +306,7 @@ def index():
 def recognize():
     """Capture and transcribe speech from microphone"""
     config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
-    config.speech_recognition_language = "en-US"
+    config.speech_recognition_language = "id-ID"
     audio_config = speechsdk.audio.AudioConfig(use_default_microphone=True)
     recognizer = speechsdk.SpeechRecognizer(speech_config=config, audio_config=audio_config)
     
@@ -331,7 +331,7 @@ def recognize():
         }
 
 # Conversation history
-conversation_history = [{"role": "system", "content": "You are a helpful assistant."}]
+conversation_history = [{"role": "system", "content": "You are Khalifa, a smart, friendly, and casual AI assistant designed to help students of Universitas Brawijaya. You speak in a relaxed tone, like a helpful senior who's been through the same struggles. You're good at giving quick, clear, and practical answers—whether it's about campus life, academics, technical stuff, or just general motivation. Always be supportive, never too formal, and don't repeat generic advice. Help students figure things out efficiently and with a bit of good vibes."}]
 
 # AI response generation endpoint
 @app.route('/generate-response', methods=['POST'])
@@ -359,7 +359,7 @@ def generate_response():
         reply = response.choices[0].message.content;
 
         # Remove markdown symbols like **, __, *, _, `, etc.
-        reply_clean = re.sub(r'(\*\*|__|\*|_|`|~|#)', '', reply);
+        reply_clean = re.sub(r'(\*\*|__|\*|_|`|~|#|💪)', '', reply);
         # Optionally, remove other unwanted symbols or patterns here
 
         conversation_history.append({"role": "assistant", "content": reply_clean})
@@ -390,7 +390,7 @@ def generate_speech():
     try:
         # Configure speech synthesizer
         config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
-        config.speech_synthesis_voice_name = "en-GB-SoniaNeural"
+        config.speech_synthesis_voice_name = "id-ID-GadisNeural"
         
         # Use in-memory stream instead of file
         stream = BytesIO()
@@ -402,21 +402,15 @@ def generate_speech():
         result = synthesizer.speak_text_async(text).get()
         
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            # Get audio data as bytes
-            audio_data = result.audio_data
+            audio_stream = speechsdk.AudioDataStream(result)
             temp_path = "static/generated.wav"
-            with wave.open(temp_path, 'wb') as wf:
-                wf.setnchannels(1)
-                wf.setsampwidth(2)
-                wf.setframerate(20000)
-                wf.writeframes(audio_data)
+            audio_stream.save_to_wav_file(temp_path)
 
-            # Start lipsync
             start_lipsync_with_ws(temp_path)
-            # Convert to base64 for web playback
-            # audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-            
-            
+
+            # with open(temp_path, "rb") as f:
+            #     audio_base64 = base64.b64encode(f.read()).decode("utf-8")
+
             return {
                 "success": True,
                 # "audio": audio_base64
