@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Audio Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            opacity: 0.7;
+        }
+
+        .mic-container {
+            position: relative;
+            margin: 3rem auto;
+            width: 200px;
+            height: 200px;
+        }
+
+        .mic-button {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mic-button:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .mic-button.recording {
+            animation: pulse 1.5s infinite;
+            background: linear-gradient(145deg, rgba(255, 100, 100, 0.3), rgba(255, 50, 50, 0.2));
+            border-color: #ff6b6b;
+        }
+
+        .mic-button.processing {
+            animation: spin 2s linear infinite;
+            background: linear-gradient(145deg, rgba(100, 255, 100, 0.3), rgba(50, 255, 50, 0.2));
+            border-color: #51cf66;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .mic-icon {
+            font-size: 4rem;
+            color: white;
+            opacity: 0.8;
+        }
+
+        .status {
+            margin-top: 2rem;
+            font-size: 1.2rem;
+            min-height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .status.recording {
+            color: #ff6b6b;
+        }
+
+        .status.processing {
+            color: #51cf66;
+        }
+
+        .status.playing {
+            color: #74c0fc;
+        }
+
+        .chat-history {
+            margin-top: 2rem;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .user-message {
+            background: rgba(255, 255, 255, 0.2);
+            margin-left: 2rem;
+        }
+
+        .assistant-message {
+            background: rgba(255, 255, 255, 0.1);
+            margin-right: 2rem;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .controls {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 0.8rem 1.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .volume-control {
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .volume-slider {
+            width: 150px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">AI Voice Assistant</h1>
+        <p class="subtitle">Tekan tombol mikrofon dan mulai berbicara</p>
+        
+        <div class="mic-container">
+            <button class="mic-button" id="micButton">
+                <div class="mic-icon">🎤</div>
+            </button>
+        </div>
+        
+        <div class="status" id="status">Tekan mikrofon untuk mulai</div>
+        
+        <div class="controls">
+            <button class="control-btn" id="clearBtn">🗑️ Clear Chat</button>
+        </div>
+        
+        <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="0.8">
+            <span id="volumeValue">80%</span>
+        </div>
+        
+        <div class="chat-history" id="chatHistory">
+            <div class="chat-message assistant-message">
+                Halo! Saya siap membantu Anda. Tekan tombol mikrofon dan mulai berbicara.
+            </div>
+        </div>
+    </div>
+<!-- 
+    <script>
+        class VoiceAssistant {
+            constructor() {
+                this.isRecording = false;
+                this.isProcessing = false;
+                this.mediaRecorder = null;
+                this.audioChunks = [];
+                this.currentAudio = null;
+                
+                this.micButton = document.getElementById('micButton');
+                this.status = document.getElementById('status');
+                this.chatHistory = document.getElementById('chatHistory');
+                this.clearBtn = document.getElementById('clearBtn');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.volumeValue = document.getElementById('volumeValue');
+                
+                this.initializeEventListeners();
+                this.checkMicrophonePermission();
+            }
+            
+            initializeEventListeners() {
+                this.micButton.addEventListener('click', () => this.toggleRecording());
+                this.clearBtn.addEventListener('click', () => this.clearChat());
+                this.volumeSlider.addEventListener('input', (e) => this.updateVolume(e.target.value));
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && !e.repeat) {
+                        e.preventDefault();
+                        this.toggleRecording();
+                    }
+                });
+            }
+            
+            async checkMicrophonePermission() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    this.updateStatus('Mikrofon siap digunakan');
+                } catch (error) {
+                    this.updateStatus('Izin mikrofon diperlukan', 'error');
+                }
+            }
+            
+            async toggleRecording() {
+                if (this.isProcessing) return;
+                
+                if (!this.isRecording) {
+                    await this.startRecording();
+                } else {
+                    await this.stopRecording();
+                }
+            }
+            
+            async startRecording() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+                    
+                    this.mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    
+                    this.audioChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.audioChunks.push(event.data);
+                        }
+                    };
+                    
+                    this.mediaRecorder.onstop = () => {
+                        this.processAudio();
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    this.mediaRecorder.start(100);
+                    this.isRecording = true;
+                    
+                    this.micButton.classList.add('recording');
+                    this.updateStatus('🔴 Sedang merekam... (tekan lagi untuk berhenti)', 'recording');
+                    
+                } catch (error) {
+                    console.error('Error starting recording:', error);
+                    this.updateStatus('Error: Tidak bisa mengakses mikrofon', 'error');
+                }
+            }
+            
+            async stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    this.micButton.classList.remove('recording');
+                    this.updateStatus('⏹️ Berhenti merekam...', 'processing');
+                }
+            }
+            
+            async processAudio() {
+                this.isProcessing = true;
+                this.micButton.classList.add('processing');
+                this.updateStatus('🔄 Memproses audio<span class="loading-dots"></span>', 'processing');
+                
+                try {
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    
+                    // Simulate speech-to-text conversion
+                    await this.simulateDelay(2000);
+                    const transcribedText = await this.speechToText(audioBlob);
+                    
+                    this.addMessageToChat(transcribedText, 'user');
+                    
+                    // Simulate AI processing
+                    this.updateStatus('🤖 AI sedang memproses<span class="loading-dots"></span>', 'processing');
+                    await this.simulateDelay(1500);
+                    
+                    const aiResponse = await this.getAIResponse(transcribedText);
+                    this.addMessageToChat(aiResponse, 'assistant');
+                    
+                    // Convert AI response to speech
+                    this.updateStatus('🎵 Menghasilkan audio<span class="loading-dots"></span>', 'processing');
+                    await this.simulateDelay(1000);
+                    
+                    await this.textToSpeech(aiResponse);
+                    
+                } catch (error) {
+                    console.error('Error processing audio:', error);
+                    this.updateStatus('Error memproses audio', 'error');
+                    this.addMessageToChat('Maaf, terjadi error saat memproses audio Anda.', 'assistant');
+                } finally {
+                    this.isProcessing = false;
+                    this.micButton.classList.remove('processing');
+                    this.updateStatus('✅ Selesai - Tekan mikrofon untuk berbicara lagi');
+                }
+            }
+            
+            async speechToText(audioBlob) {
+                // Simulasi konversi speech-to-text
+                // Di implementasi nyata, ini akan mengirim audio ke Flask backend
+                const responses = [
+                    "Halo, apa kabar?",
+                    "Bisakah kamu jelaskan tentang artificial intelligence?",
+                    "Bagaimana cara kerja machine learning?",
+                    "Ceritakan tentang teknologi terbaru",
+                    "Apa yang bisa kamu lakukan?"
+                ];
+                return responses[Math.floor(Math.random() * responses.length)];
+            }
+            
+            async getAIResponse(userText) {
+                // Simulasi response dari AI
+                // Di implementasi nyata, ini akan mengirim request ke Flask backend
+                const responses = [
+                    "Terima kasih sudah bertanya! Saya AI assistant yang siap membantu Anda dengan berbagai pertanyaan dan tugas.",
+                    "Artificial Intelligence atau AI adalah teknologi yang memungkinkan mesin untuk belajar dan membuat keputusan seperti manusia.",
+                    "Machine Learning bekerja dengan cara melatih model menggunakan data, sehingga dapat membuat prediksi atau keputusan pada data baru.",
+                    "Teknologi terbaru meliputi AI generatif, quantum computing, dan otomatisasi cerdas yang mengubah cara kita bekerja.",
+                    "Saya bisa membantu menjawab pertanyaan, memberikan penjelasan, dan berdiskusi tentang berbagai topik menarik!"
+                ];
+                return responses[Math.floor(Math.random() * responses.length)];
+            }
+            
+            async textToSpeech(text) {
+                // Menggunakan Web Speech API untuk text-to-speech
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'id-ID';
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1;
+                    utterance.volume = parseFloat(this.volumeSlider.value);
+                    
+                    utterance.onstart = () => {
+                        this.updateStatus('🔊 Sedang berbicara...', 'playing');
+                    };
+                    
+                    utterance.onend = () => {
+                        this.updateStatus('✅ Selesai - Tekan mikrofon untuk berbicara lagi');
+                    };
+                    
+                    speechSynthesis.speak(utterance);
+                }
+            }
+            
+            addMessageToChat(message, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-message ${sender}-message`;
+                messageDiv.innerHTML = `<strong>${sender === 'user' ? 'Anda' : 'Assistant'}:</strong> ${message}`;
+                
+                this.chatHistory.appendChild(messageDiv);
+                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+            }
+            
+            clearChat() {
+                this.chatHistory.innerHTML = `
+                    <div class="chat-message assistant-message">
+                        Chat telah dibersihkan. Tekan tombol mikrofon untuk mulai berbicara.
+                    </div>
+                `;
+            }
+            
+            updateStatus(message, type = '') {
+                this.status.innerHTML = message;
+                this.status.className = `status ${type}`;
+            }
+            
+            updateVolume(value) {
+                this.volumeValue.textContent = Math.round(value * 100) + '%';
+            }
+            
+            simulateDelay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+        
+        // Initialize the voice assistant when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VoiceAssistant();
+        });
+    </script> -->
+</body>
+</html>
